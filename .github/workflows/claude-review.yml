@@ -1,0 +1,66 @@
+name: Claude Code Review (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      model:
+        description: "Modelo Claude a usar"
+        type: string
+        default: "claude-sonnet-4-20250514"
+      max_turns:
+        description: "Maximo de turnos de conversacao"
+        type: number
+        default: 3
+      review_language:
+        description: "Idioma dos comentarios (pt-BR, en, es)"
+        type: string
+        default: "pt-BR"
+      extra_instructions:
+        description: "Instrucoes adicionais especificas do repo"
+        type: string
+        default: ""
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
+
+jobs:
+  review:
+    if: |
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are a senior code reviewer. Review the changes in this pull request.
+
+            IMPORTANT RULES:
+            - Language: Write all comments in ${{ inputs.review_language }}
+            - ONLY add review comments. NEVER push code changes or create commits.
+            - Focus on: bugs, security issues, performance problems, and code quality
+            - Be concise and actionable - suggest fixes inline when possible
+            - If the code looks good, say so briefly - don't nitpick
+            - Ignore formatting-only changes unless they break readability
+            ${{ inputs.extra_instructions }}
+
+            Review the PR diff now and leave your feedback as PR review comments.
+
+          claude_args: |
+            --model ${{ inputs.model }}
+            --max-turns ${{ inputs.max_turns }}
+            --allowedTools "View,GlobTool,GrepTool,BatchTool"
+            --disallowedTools "Bash,Edit,Replace,Write,NotebookEdit"
