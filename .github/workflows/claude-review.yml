@@ -6,7 +6,7 @@ on:
       model:
         description: "Modelo Claude a usar"
         type: string
-        default: "claude-sonnet-4-20250514"
+        default: "claude-sonnet-4-6"
       max_turns:
         description: "Maximo de turnos de conversacao"
         type: number
