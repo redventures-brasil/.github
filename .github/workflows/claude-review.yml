@@ -10,7 +10,7 @@ on:
       max_turns:
         description: "Maximo de turnos de conversacao"
         type: number
-        default: 10
+        default: 200
       review_language:
         description: "Idioma dos comentarios (pt-BR, en, es)"
         type: string
