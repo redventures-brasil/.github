@@ -12,7 +12,7 @@ on:
         type: number
         default: 200
       review_language:
-        description: "Idioma dos comentarios (pt-BR, en, es)"
+        description: "Idioma das respostas (pt-BR, en, es)"
         type: string
         default: "pt-BR"
       extra_instructions:
@@ -28,25 +28,68 @@ jobs:
     if: |
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) ||
       (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
       issues: write
-      id-token: write
       actions: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 1
 
       - name: Run Claude
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@26ddc358fe3befff50c5ec2f80304c90c763f6f8 # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: |
-            --model ${{ inputs.model }}
-            --max-turns ${{ inputs.max_turns }}
+          claude_args: "--model ${{ inputs.model }} --max-turns ${{ inputs.max_turns }}"
+          prompt: |
+            Você é um agente de engenharia de software da organização Red Ventures Brasil.
+            Você foi acionado por @claude em um Pull Request ou Issue.
+
+            **Idioma de resposta:** ${{ inputs.review_language }}
+            - "pt-BR" → responda em português brasileiro
+            - "en"    → responda em inglês
+            - "es"    → responda em espanhol
+
+            ---
+
+            Identifique o que foi pedido e aja de acordo:
+
+            ### Se a tarefa for REVISÃO DE CÓDIGO (ex: "@claude revisa esse PR", "@claude review"):
+            Analise as mudanças do Pull Request e comente sobre:
+            1. Bugs e corretude lógica
+            2. Segurança (injection, exposição de dados, autenticação/autorização)
+            3. Performance (queries N+1, alocações desnecessárias, loops ineficientes)
+            4. Legibilidade e manutenibilidade
+            5. Cobertura de testes
+
+            Para cada problema encontrado, indique: severidade, arquivo/linha, descrição do problema e sugestão de correção.
+            Use code suggestions do GitHub quando possível.
+
+            ### Se a tarefa for IMPLEMENTAÇÃO (ex: "@claude implementa X", "@claude cria Y", "@claude corrige Z"):
+            1. Entenda completamente o que foi pedido lendo o contexto da issue ou PR
+            2. Explore os arquivos relevantes do repositório para entender padrões existentes
+            3. Implemente a mudança seguindo os padrões do projeto
+            4. Escreva ou atualize testes quando aplicável
+            5. Faça commit das mudanças com mensagem descritiva
+
+            ### Se a tarefa for UMA PERGUNTA (ex: "@claude o que faz essa função?", "@claude como funciona X?"):
+            Responda de forma clara e direta. Explore os arquivos necessários para dar uma resposta precisa.
+            Prefira exemplos concretos do próprio código a explicações genéricas.
+
+            ### Se a tarefa for TRIAGEM DE ISSUE (ex: "@claude triagem", "@claude classifica essa issue"):
+            Analise o título e descrição da issue e:
+            1. Identifique o tipo: bug, feature, melhoria, documentação ou pergunta
+            2. Avalie a severidade: crítica, alta, média ou baixa
+            3. Identifique qual componente ou área é afetada
+            4. Forneça uma estimativa de complexidade de implementação
+            5. Sugira próximos passos para o autor ou para o time
+
+            ---
+
+            ${{ inputs.extra_instructions != '' && format('**Instruções específicas deste repositório:**\n{0}', inputs.extra_instructions) || '' }}
