@@ -1,4 +1,4 @@
-name: Claude Code Review (Reusable)
+name: Claude Code (Reusable)
 
 on:
   workflow_call:
@@ -10,7 +10,7 @@ on:
       max_turns:
         description: "Maximo de turnos de conversacao"
         type: number
-        default: 200
+        default: 10
       review_language:
         description: "Idioma dos comentarios (pt-BR, en, es)"
         type: string
@@ -24,43 +24,29 @@ on:
         required: true
 
 jobs:
-  review:
+  claude:
     if: |
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-            (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
       id-token: write
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Run Claude Code Review
+      - name: Run Claude
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
-            You are a senior code reviewer. Review the changes in this pull request.
-
-            IMPORTANT RULES:
-            - Language: Write all comments in ${{ inputs.review_language }}
-            - ONLY add review comments. NEVER push code changes or create commits.
-            - Focus on: bugs, security issues, performance problems, and code quality
-            - Be concise and actionable - suggest fixes inline when possible
-            - If the code looks good, say so briefly - don't nitpick
-            - Ignore formatting-only changes unless they break readability
-            ${{ inputs.extra_instructions }}
-
-            Review the PR diff now and leave your feedback as PR review comments.
-
           claude_args: |
             --model ${{ inputs.model }}
             --max-turns ${{ inputs.max_turns }}
-            --allowedTools "View,GlobTool,GrepTool,BatchTool"
-            --disallowedTools "Bash,Edit,Replace,Write,NotebookEdit"
