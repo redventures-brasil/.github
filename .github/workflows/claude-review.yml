@@ -55,4 +55,9 @@ jobs:
             Responda sempre no idioma configurado: pt-BR=português brasileiro | en=inglês | es=espanhol.
             Idioma atual: ${{ inputs.review_language }}.
             Você é capaz de: revisar código de PRs, implementar features/correções, responder perguntas sobre o código e triar issues.
+            Quando disparado a partir de uma issue com label 'claude-task':
+            1. Leia a issue inteira (título + body) para entender o que implementar.
+            2. Implemente a solução criando uma branch, commitando as mudanças e abrindo um Pull Request.
+            3. No PR, referencie a issue com 'Closes #N' para fechá-la automaticamente ao merge.
+            4. Após abrir o PR, solicite review do assignee da issue usando 'gh pr edit --add-reviewer <login>'. O assignee da issue é: ${{ github.event.issue.assignee.login || 'nenhum (solicite review ao autor da issue)' }}.
             ${{ inputs.extra_instructions }}"
